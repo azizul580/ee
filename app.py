@@ -12,17 +12,14 @@ if not os.path.exists(DOWNLOAD_FOLDER):
 @app.route("/", methods=["GET", "POST"])
 def index():
     message = ""
-    # Render-এর URL ডায়নামিকভাবে পাওয়া
     base_url = request.host_url
     if request.method == "POST":
         url = request.form.get("url")
         try:
-            # yt-dlp দিয়ে ভিডিও তথ্য আনা
             ydl_opts = {"quiet": True, "no_warnings": True}
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 formats = info.get("formats", [])
-                # ফরম্যাট তালিকা তৈরি
                 stream_list = [
                     (
                         f"{f.get('format_note', 'N/A')} - {f.get('ext', 'N/A')} "
@@ -30,7 +27,7 @@ def index():
                         f['format_id']
                     )
                     for f in formats
-                    if f.get('ext') in ['mp4', 'webm', 'm4a', 'mp3']  # শুধু নির্দিষ্ট ফরম্যাট
+                    if f.get('ext') in ['mp4', 'webm', 'm4a', 'mp3']
                 ]
                 return render_template(
                     "formats.html",
@@ -48,17 +45,16 @@ def download():
     url = request.form.get("url")
     format_id = request.form.get("format_id")
     try:
-        # yt-dlp দিয়ে ফাইল ডাউনলোড
+        # yt-dlp দিয়ে ফাইল ডাউনলোড, ffmpeg ছাড়াই
         ydl_opts = {
-            "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
+            "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s-%(format_id)s.%(ext)s"),
             "format": format_id,
             "noplaylist": True,
-            "merge_output_format": "mp4",  # ভিডিও + অডিও মার্জ করার জন্য
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            # ডাউনলোড করা ফাইলের পাথ
-            file_path = os.path.join(DOWNLOAD_FOLDER, f"{info['title']}.{info['ext']}")
+            # ফাইলের পাথ তৈরি
+            file_path = os.path.join(DOWNLOAD_FOLDER, f"{info['title']}-{format_id}.{info['ext']}")
             return send_file(file_path, as_attachment=True)
     except Exception as e:
         return render_template("index.html", message=f"Error: {str(e)}", base_url=request.host_url)
